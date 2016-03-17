@@ -28,6 +28,10 @@ func NewToughSession(hub *Hub, client *remoteClient, clean bool) ToughSession {
 	}
 }
 
+func (ts *ToughSession) GetSubscription() string {
+
+}
+
 func (ts ToughSession) AddSubscription(pkt *packet.Subscription) error {
 	store := ts.hub.getStore()
 	c := store.DB("sunqtt").C("subscriptions")

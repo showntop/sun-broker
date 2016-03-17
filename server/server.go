@@ -44,3 +44,7 @@ func Launch(urlString string) (Server, error) {
 
 	return nil, UnsupportedProtocol //newTransportError(LaunchError, ErrUnsupportedProtocol)
 }
+
+func Close() {
+
+}

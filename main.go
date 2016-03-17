@@ -9,11 +9,12 @@ import (
 
 func main() {
 
-	server, err := server.Launch("tcp://localhost:8080")
+	server, err := server.Launch("tcp://localhost:1883")
 	if err != nil {
 		fmt.Println(err)
 		panic("介绍")
 	}
+	// defer server.close
 	fmt.Println("server start listener....")
 	for {
 		conn, err := server.Accept() //不断的获取新的tcp连接

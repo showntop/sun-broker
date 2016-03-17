@@ -20,6 +20,7 @@ type remoteClient struct {
 	hub     *Hub
 	conn    net.Conn
 	session Session
+	out     chan *packet.Message
 }
 
 // newRemoteClient takes over a connection and returns a remoteClient
@@ -27,6 +28,7 @@ func NewRemoteClient(hub *Hub, conn net.Conn) *remoteClient {
 	c := &remoteClient{
 		hub:  hub,
 		conn: conn,
+		out:  make(chan *packet.Message),
 	}
 
 	go c.loopProc()
@@ -63,26 +65,32 @@ func (rc *remoteClient) loopProc() {
 		case *packet.SubscribePacket:
 			subcription, ok := pkt.(*packet.SubscribePacket)
 			if !ok {
-				// return c.die(fmt.Errorf("expected connect"), true)
+				//停掉客户端
+				// return rc.die(fmt.Errorf("expected connect"), true)
 			}
 
 			err = rc.whenSubscribe(subcription)
-			// case *packet.UnsubscribePacket:
-			// 	err = c.processUnsubscribe(_pkt)
-			// case *packet.PublishPacket:
-			// 	err = c.processPublish(_pkt)
-			// case *packet.PubackPacket:
-			// 	err = c.processPubackAndPubcomp(_pkt.PacketID)
-			// case *packet.PubcompPacket:
-			// 	err = c.processPubackAndPubcomp(_pkt.PacketID)
-			// case *packet.PubrecPacket:
-			// 	err = c.processPubrec(_pkt.PacketID)
-			// case *packet.PubrelPacket:
-			// 	err = c.processPubrel(_pkt.PacketID)
-			// case *packet.PingreqPacket:
-			// 	err = c.processPingreq()
+		// case *packet.UnsubscribePacket:
+		// 	err = rc.whenUnsubscribe(pkt)
+		case *packet.PublishPacket:
+			publish, ok := pkt.(*packet.PublishPacket)
+			if !ok {
+				//停掉客户端
+				// return rc.die(fmt.Errorf("expected connect"), true)
+			}
+			err = rc.whenPublish(publish)
+		// case *packet.PubackPacket:
+		// 	err = rc.whenPubackAndPubcomp(pkt.PacketID)
+		// case *packet.PubcompPacket:
+		// 	err = rc.whenPubackAndPubcomp(pkt.PacketID)
+		// case *packet.PubrecPacket:
+		// 	err = rc.whenPubrec(pkt.PacketID)
+		// case *packet.PubrelPacket:
+		// 	err = rc.whenPubrel(pkt.PacketID)
+		case *packet.PingreqPacket:
+			err = rc.whenPingreq()
 			// case *packet.DisconnectPacket:
-			// 	err = c.processDisconnect()
+			// 	err = rc.whenDisconnect()
 		}
 
 		// return eventual error
@@ -90,6 +98,15 @@ func (rc *remoteClient) loopProc() {
 		// 	return err // error has already been cleaned
 		// }
 	}
+}
+
+func (rc *remoteClient) whenPingreq() error {
+	err := rc.send(packet.NewPingrespPacket())
+	if err != nil {
+		// return c.die(err, false)
+	}
+
+	return nil
 }
 
 // sends packet
@@ -170,6 +187,8 @@ func (rc *remoteClient) whenConnect(pkt *packet.ConnectPacket) error {
 
 	// start sender
 	// go c.sender
+	sender := sender{rc}
+	go sender.Run()
 
 	// // retrieve stored packets
 	// packets, err := c.session.AllPackets(outgoing)
