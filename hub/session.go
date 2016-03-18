@@ -14,6 +14,8 @@ type ToughSession struct {
 	hub           *Hub
 	subscriptions []string
 	offlineMsgs   []string
+	outPackets    map[string]string
+	inPackets     map[string]string
 
 	will *packet.Message
 
@@ -28,8 +30,25 @@ func NewToughSession(hub *Hub, client *remoteClient, clean bool) ToughSession {
 	}
 }
 
-func (ts *ToughSession) GetSubscription() string {
+func (ts *Session) CurrentClient() {
+	return ts.currentClient
+}
 
+func (ts *ToughSession) LookupPacket(id uint16) error {
+
+}
+
+func (ts *ToughSession) SavePacket(pkt packet.Packet) error {
+	//缓存10个包，多余保存到数据库,或者考虑服务器问题，缓存数据怎么办？
+	id, ok := packet.PacketID(pkt)
+	if ok {
+		ts.outPackets[id] = pkt
+	}
+
+}
+
+func (ts *ToughSession) GetSubscription() string {
+	return ""
 }
 
 func (ts ToughSession) AddSubscription(pkt *packet.Subscription) error {

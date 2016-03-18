@@ -1,12 +1,12 @@
 package hub
 
 // handle an incoming PubrelPacket
-func (c *remoteClient) processPubrel(packetID uint16) error {
+func (rc *remoteClient) processPubrel(packetID uint16) error {
 	fmt.Println("pubrel...")
 	// get packet from store
-	pkt, err := c.session.LookupPacket(incoming, packetID)
+	pkt, err := rc.session.LookupPacket(packetID)
 	if err != nil {
-		return c.die(err, true)
+		// return rc.die(err, true)
 	}
 
 	// get packet from store
@@ -19,21 +19,21 @@ func (c *remoteClient) processPubrel(packetID uint16) error {
 	pubcomp.PacketID = publish.PacketID
 
 	// acknowledge PublishPacket
-	err = c.send(pubcomp)
+	err = rc.send(pubcomp)
 	if err != nil {
-		return c.die(err, false)
+		// return rc.die(err, false)
 	}
 
 	// remove packet from store
-	err = c.session.DeletePacket(incoming, packetID)
-	if err != nil {
-		return c.die(err, true)
-	}
+	// err = c.session.DeletePacket(packetID)
+	// if err != nil {
+	// 	return c.die(err, true)
+	// }
 
 	// publish packet to others
-	err = c.broker.Backend.Publish(c, &publish.Message)
+	err = rc.hub.Publish(c, &publish.Message)
 	if err != nil {
-		return c.die(err, true)
+		// return rc.die(err, true)
 	}
 
 	return nil

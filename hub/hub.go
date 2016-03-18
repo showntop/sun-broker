@@ -3,6 +3,7 @@ package hub
 import (
 	"net"
 
+	"github.com/gomqtt/packet"
 	"github.com/showntop/sun-broker/store"
 	"gopkg.in/mgo.v2"
 )
@@ -36,5 +37,21 @@ func Mount(conn net.Conn) {
 
 func (h *Hub) Seed(sess Session, sessid string) error {
 	h.sessions[sessid] = &sess
+	return nil
+}
+
+func (h *Hub) Publish(msg *packet.Message) error {
+	// store := h.store
+	// c := store.DB("sunqtt").C("subscriptions")
+	// subs, err := c.find()
+	// if err != nil {
+
+	// }
+
+	for seesid, session := range h.sessions {
+		// fmt.Println(k, v)
+		// session.CurrentClient().send(msg)
+	}
+
 	return nil
 }

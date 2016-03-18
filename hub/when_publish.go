@@ -10,6 +10,8 @@ func (rc *remoteClient) whenPublish(publish *packet.PublishPacket) error {
 
 	fmt.Println("publish...")
 	if publish.Message.QOS == 1 {
+		fmt.Println("qos1...")
+
 		puback := packet.NewPubackPacket()
 		puback.PacketID = publish.PacketID
 
@@ -21,17 +23,19 @@ func (rc *remoteClient) whenPublish(publish *packet.PublishPacket) error {
 	}
 
 	if publish.Message.QOS == 2 {
+		fmt.Println("qos2...")
+
 		// store packet
-		// err := rc.session.SavePacket(incoming, publish)
-		// if err != nil {
-		// 	// return rc.die(err, true)
-		// }
+		err := rc.session.SaveOutPacket(incoming, publish)
+		if err != nil {
+			// return rc.die(err, true)
+		}
 
 		pubrec := packet.NewPubrecPacket()
 		pubrec.PacketID = publish.PacketID
 
 		// signal qos 2 publish
-		err := rc.send(pubrec)
+		err = rc.send(pubrec)
 		if err != nil {
 			// return c.die(err, false)
 		}
