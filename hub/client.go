@@ -20,7 +20,6 @@ type remoteClient struct {
 	hub     *Hub
 	conn    net.Conn
 	session Session
-	out     chan *packet.Message
 }
 
 // newRemoteClient takes over a connection and returns a remoteClient
@@ -28,7 +27,6 @@ func NewRemoteClient(hub *Hub, conn net.Conn) *remoteClient {
 	c := &remoteClient{
 		hub:  hub,
 		conn: conn,
-		out:  make(chan *packet.Message),
 	}
 
 	go c.loopProc()
@@ -53,6 +51,9 @@ func (rc *remoteClient) loopProc() {
 			// return c.die(err, false)
 		}
 		fmt.Println(pkt)
+		if pkt == nil {
+			panic(pkt)
+		}
 		// c.log("%s - Received: %s", c.Context().Get("uuid"), pkt.String())
 
 		switch pkt.(type) {
@@ -85,8 +86,14 @@ func (rc *remoteClient) loopProc() {
 		// 	err = rc.whenPubackAndPubcomp(pkt.PacketID)
 		// case *packet.PubrecPacket:
 		// 	err = rc.whenPubrec(pkt.PacketID)
-		// case *packet.PubrelPacket:
-		// 	err = rc.whenPubrel(pkt.PacketID)
+		case *packet.PubrelPacket:
+			pubrelPacket, ok := pkt.(*packet.PubrelPacket)
+			if !ok {
+				//停掉客户端
+				// return rc.die(fmt.Errorf("expected connect"), true)
+			}
+
+			err = rc.whenPubrel(pubrelPacket.PacketID)
 		case *packet.PingreqPacket:
 			err = rc.whenPingreq()
 			// case *packet.DisconnectPacket:
@@ -111,7 +118,7 @@ func (rc *remoteClient) whenPingreq() error {
 
 // sends packet
 func (rc *remoteClient) send(pkt packet.Packet) error {
-
+	fmt.Println(pkt)
 	// rc.sMutex.Lock()
 	// defer c.sMutex.Unlock()
 
@@ -187,8 +194,8 @@ func (rc *remoteClient) whenConnect(pkt *packet.ConnectPacket) error {
 
 	// start sender
 	// go c.sender
-	sender := sender{rc}
-	go sender.Run()
+	// sender := sender{rc}
+	// go sender.Run()
 
 	// // retrieve stored packets
 	// packets, err := c.session.AllPackets(outgoing)

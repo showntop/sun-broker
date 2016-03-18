@@ -1,7 +1,13 @@
 package hub
 
+import (
+	"fmt"
+
+	"github.com/gomqtt/packet"
+)
+
 // handle an incoming PubrelPacket
-func (rc *remoteClient) processPubrel(packetID uint16) error {
+func (rc *remoteClient) whenPubrel(packetID uint16) error {
 	fmt.Println("pubrel...")
 	// get packet from store
 	pkt, err := rc.session.LookupPacket(packetID)
@@ -17,7 +23,7 @@ func (rc *remoteClient) processPubrel(packetID uint16) error {
 
 	pubcomp := packet.NewPubcompPacket()
 	pubcomp.PacketID = publish.PacketID
-
+	fmt.Println("publish complete...")
 	// acknowledge PublishPacket
 	err = rc.send(pubcomp)
 	if err != nil {
@@ -31,7 +37,7 @@ func (rc *remoteClient) processPubrel(packetID uint16) error {
 	// }
 
 	// publish packet to others
-	err = rc.hub.Publish(c, &publish.Message)
+	err = rc.hub.Publish(&publish.Message)
 	if err != nil {
 		// return rc.die(err, true)
 	}

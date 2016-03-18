@@ -26,7 +26,7 @@ func (rc *remoteClient) whenPublish(publish *packet.PublishPacket) error {
 		fmt.Println("qos2...")
 
 		// store packet
-		err := rc.session.SaveOutPacket(incoming, publish)
+		err := rc.session.HoldPacket(publish)
 		if err != nil {
 			// return rc.die(err, true)
 		}

@@ -1,6 +1,7 @@
 package hub
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/gomqtt/packet"
@@ -9,7 +10,7 @@ import (
 )
 
 type Hub struct {
-	sessions map[string]*Session
+	sessions map[string]Session
 	store    *mgo.Session
 }
 
@@ -19,7 +20,7 @@ func init() {
 	///初始化存储装置
 	store := store.NewStore(1)
 	hub = Hub{
-		sessions: make(map[string]*Session),
+		sessions: make(map[string]Session),
 		store:    store,
 	}
 }
@@ -36,7 +37,7 @@ func Mount(conn net.Conn) {
 }
 
 func (h *Hub) Seed(sess Session, sessid string) error {
-	h.sessions[sessid] = &sess
+	h.sessions[sessid] = sess
 	return nil
 }
 
@@ -48,9 +49,10 @@ func (h *Hub) Publish(msg *packet.Message) error {
 
 	// }
 
-	for seesid, session := range h.sessions {
+	for _, session := range h.sessions {
 		// fmt.Println(k, v)
-		// session.CurrentClient().send(msg)
+		fmt.Println(session)
+		session.PileupMsg(msg)
 	}
 
 	return nil
