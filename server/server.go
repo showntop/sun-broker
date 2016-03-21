@@ -14,35 +14,33 @@ type Server interface {
 	// Close will close the underlying listener and cleanup resources. It will
 	// return an Error if the underlying listener didn't close cleanly.
 	Close() error
-
-	New(string) error
-}
-
-var Srv Server
-
-func init() {
-
 }
 
 // Launch will launch a server based on information extracted from an URL.
 func Launch(urlString string) (Server, error) {
 	urlParts, err := url.ParseRequestURI(urlString)
 	if err != nil {
-		return nil, err //errors.New("url解析错误")
+		return nil, UnparsedServerUrl
 	}
 	//使用反射获取相应的服务类型
 	switch urlParts.Scheme {
 	case "tcp", "mqtt":
 		return NewNetServer(urlParts.Host)
 	case "tls", "mqtts":
-	//	return NewSecureNetServer(urlParts.Host, l.TLSConfig)
+		//	return NewSecureNetServer(urlParts.Host, l.TLSConfig)
+		return nil, UnsupportedProtocol
+
 	case "ws":
-	//	return NewWebSocketServer(urlParts.Host)
+		//	return NewWebSocketServer(urlParts.Host)
+		return nil, UnsupportedProtocol
+
 	case "wss":
 		//	return NewSecureWebSocketServer(urlParts.Host, l.TLSConfig)
+		return nil, UnsupportedProtocol
+
 	}
 
-	return nil, UnsupportedProtocol //newTransportError(LaunchError, ErrUnsupportedProtocol)
+	return nil, UnsupportedProtocol
 }
 
 func Close() {

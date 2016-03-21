@@ -14,6 +14,8 @@ type SessionStore struct {
 	subscriptions []subscription
 }
 
-func NewStore(driverType int) *mgo.Session {
-	return ConnectMongo("mongodb://127.0.0.1")
+func NewStore(driverType int) *mgo.Database {
+	///从配置文件中
+	session := ConnectMongo("mongodb://127.0.0.1")
+	return session.DB("sunqtt")
 }

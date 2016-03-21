@@ -10,8 +10,8 @@ import (
 )
 
 type Hub struct {
-	sessions map[string]Session
-	store    *mgo.Session
+	Sessions map[string]Session //使用用户uuid作为session主键
+	Store    *mgo.Database
 }
 
 var hub Hub
@@ -23,10 +23,6 @@ func init() {
 		sessions: make(map[string]Session),
 		store:    store,
 	}
-}
-
-func (h *Hub) getStore() *mgo.Session {
-	return h.store
 }
 
 func Mount(conn net.Conn) {
@@ -41,7 +37,7 @@ func (h *Hub) Seed(sess Session, sessid string) error {
 	return nil
 }
 
-func (h *Hub) Publish(msg *packet.Message) error {
+func (h *Hub) Distribute(msg *packet.Message) error {
 	// store := h.store
 	// c := store.DB("sunqtt").C("subscriptions")
 	// subs, err := c.find()

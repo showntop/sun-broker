@@ -1,27 +1,31 @@
 package main
 
 import (
-	"fmt"
-
+	log "github.com/Sirupsen/logrus"
 	"github.com/showntop/sun-broker/hub"
 	"github.com/showntop/sun-broker/server"
 )
 
 func main() {
-
-	server, err := server.Launch("tcp://localhost:1883")
+	///解析配置参数
+	///多语言、国际化
+	srv, err := server.Launch("tcp://localhost:1883")
 	if err != nil {
-		fmt.Println(err)
-		panic("介绍")
+		log.Panic(err)
 	}
-	// defer server.close
-	fmt.Println("server start listener....")
+	log.Infof("server start at port: %s", "1883")
 	for {
-		conn, err := server.Accept() //不断的获取新的tcp连接
+		conn, err := srv.Accept() //不断的获取新的tcp连接
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 		}
-		fmt.Println(conn)
 		go hub.Mount(conn)
 	}
+	defer func() {
+		err := srv.Close()
+		if err != nil {
+			log.Panic(err)
+		}
+	}()
+
 }

@@ -21,7 +21,7 @@ func (s *sender) Run() {
 		case msg := <-s.session.GetOutChan():
 			publish := packet.NewPublishPacket()
 			publish.Message = *msg
-
+			publish.PacketID = 10
 			// send packet
 			err := s.session.PublishMsg(publish)
 			if err != nil {

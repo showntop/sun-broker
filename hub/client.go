@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 
 	"github.com/gomqtt/packet"
 )
 
+//客户端当前连接状态
 const (
 	clientConnecting byte = iota
 	clientConnected
@@ -17,9 +19,12 @@ const (
 )
 
 type remoteClient struct {
+	rMutex  sync.Mutex
+	sMutex  sync.Mutex
 	hub     *Hub
 	conn    net.Conn
 	session Session
+	state   byte
 }
 
 // newRemoteClient takes over a connection and returns a remoteClient
@@ -29,12 +34,12 @@ func NewRemoteClient(hub *Hub, conn net.Conn) *remoteClient {
 		conn: conn,
 	}
 
-	go c.loopProc()
+	go c.run()
 
 	return c
 }
 
-func (rc *remoteClient) loopProc() {
+func (rc *remoteClient) run() {
 
 	// set initial read timeout
 	// rc.conn.SetReadTimeout('')
@@ -84,8 +89,14 @@ func (rc *remoteClient) loopProc() {
 		// 	err = rc.whenPubackAndPubcomp(pkt.PacketID)
 		// case *packet.PubcompPacket:
 		// 	err = rc.whenPubackAndPubcomp(pkt.PacketID)
-		// case *packet.PubrecPacket:
-		// 	err = rc.whenPubrec(pkt.PacketID)
+		case *packet.PubrecPacket:
+			pubrecPacket, ok := pkt.(*packet.PubrecPacket)
+			if !ok {
+				//停掉客户端
+				// return rc.die(fmt.Errorf("expected connect"), true)
+			}
+
+			err = rc.whenPubrec(pubrecPacket.PacketID)
 		case *packet.PubrelPacket:
 			pubrelPacket, ok := pkt.(*packet.PubrelPacket)
 			if !ok {
@@ -107,182 +118,14 @@ func (rc *remoteClient) loopProc() {
 	}
 }
 
-func (rc *remoteClient) whenPingreq() error {
-	err := rc.send(packet.NewPingrespPacket())
-	if err != nil {
-		// return c.die(err, false)
-	}
-
-	return nil
-}
-
-// sends packet
-func (rc *remoteClient) send(pkt packet.Packet) error {
-	fmt.Println(pkt)
-	// rc.sMutex.Lock()
-	// defer c.sMutex.Unlock()
-
-	// allocate buffer
-	buf := make([]byte, pkt.Len())
-
-	// encode packet
-	_, err := pkt.Encode(buf)
-	if err != nil {
-		rc.conn.Close()
-		return errors.New("text") //newTransportError(EncodeError, err)
-	}
-
-	// write buffer to connection
-	bytesWritten, err := rc.conn.Write(buf)
-	if err != nil {
-		rc.conn.Close()
-		// return newTransportError(NetworkError, err)
-	}
-	fmt.Println(bytesWritten)
-	// increment write counter
-	// atomic.AddInt64(&c.writeCounter, int64(bytesWritten))
-
-	// return nil
-	return nil
-}
-
-func (rc *remoteClient) whenConnect(pkt *packet.ConnectPacket) error {
-	connack := packet.NewConnackPacket()
-	connack.ReturnCode = packet.ConnectionAccepted
-	connack.SessionPresent = false
-
-	// authenticate
-
-	// check authentication
-
-	// set state
-	// c.state.set(clientConnected)
-
-	// set keep alive
-	// if pkt.KeepAlive > 0 {
-	// 	c.conn.SetReadTimeout(time.Duration(pkt.KeepAlive) * 1500 * time.Millisecond)
-	// } else {
-	// 	c.conn.SetReadTimeout(0)
-	// }
-
-	// retrieve session
-	sess := NewToughSession(rc.hub, rc, pkt.CleanSession)
-	err := rc.hub.Seed(sess, pkt.ClientID)
-	if err != nil {
-		// return rc.die(err, true)
-	}
-	sess.Save(pkt.ClientID)
-	// set session present
-	connack.SessionPresent = !pkt.CleanSession
-
-	// assign session
-	rc.session = sess
-
-	// save will if present
-	if pkt.Will != nil {
-		err = nil //rc.session.SaveWill(pkt.Will)
-		if err != nil {
-			// return c.die(err, true)
-		}
-	}
-
-	// send connack
-	err = rc.send(connack)
-	if err != nil {
-		// return rc.die(err, false)
-	}
-
-	// start sender
-	// go c.sender
-	// sender := sender{rc}
-	// go sender.Run()
-
-	// // retrieve stored packets
-	// packets, err := c.session.AllPackets(outgoing)
-	// if err != nil {
-	// 	return c.die(err, true)
-	// }
-
-	// // resend stored packets
-	// for _, pkt := range packets {
-	// 	publish, ok := pkt.(*packet.PublishPacket)
-	// 	if ok {
-	// 		// set the dup flag on a publish packet
-	// 		publish.Dup = true
-	// 	}
-
-	// 	err = c.send(pkt)
-	// 	if err != nil {
-	// 		return c.die(err, false)
-	// 	}
-	// }
-
-	// // get stored subscriptions
-	// subs, err := c.session.AllSubscriptions()
-	// if err != nil {
-	// 	return c.die(err, true)
-	// }
-
-	// // restore subscriptions
-	// for _, sub := range subs {
-	// 	// TODO: Handle incoming retained messages.
-	// 	c.broker.Backend.Subscribe(c, sub.Topic)
-	// }
-
-	return nil
-}
-
-// handle an incoming SubscribePacket
-func (rc *remoteClient) whenSubscribe(pkt *packet.SubscribePacket) error {
-	suback := packet.NewSubackPacket()
-	suback.ReturnCodes = make([]byte, len(pkt.Subscriptions))
-	suback.PacketID = pkt.PacketID
-
-	// var retainedMessages []*packet.Message
-	fmt.Println("sub...")
-	fmt.Println(pkt.Subscriptions)
-	for i, subscription := range pkt.Subscriptions {
-		// save subscription in session
-		err := rc.session.AddSubscription(&subscription)
-		if err != nil {
-			// return c.die(err, true)
-		}
-
-		// subscribe client to queue
-		// msgs, err := rc.broker.Backend.Subscribe(c, subscription.Topic)
-		// if err != nil {
-		// 	return c.die(err, true)
-		// }
-
-		// cache retained messages
-		// retainedMessages = append(retainedMessages, msgs...)
-
-		// save granted qos
-		suback.ReturnCodes[i] = subscription.QOS
-	}
-
-	// send suback
-	err := rc.send(suback)
-	if err != nil {
-		// return c.die(err, false)
-	}
-
-	// send messages
-	// for _, msg := range retainedMessages {
-	// 	rc.out <- msg
-	// }
-
-	return nil
-}
-
 // Receive will read from the underlying connection and return a fully read
 // packet. It will return an Error if there was an error while decoding or
 // reading from the underlying connection.
 //
 // Note: Only one goroutine can Receive at the same time.
 func (rc *remoteClient) Receive() (packet.Packet, error) {
-	// c.rMutex.Lock()
-	// defer c.rMutex.Unlock()
+	rc.rMutex.Lock()
+	defer rc.rMutex.Unlock()
 
 	// initial detection length
 	detectionLength := 2
@@ -365,4 +208,33 @@ func (rc *remoteClient) Receive() (packet.Packet, error) {
 
 		return pkt, nil
 	}
+}
+
+// sends packet
+func (rc *remoteClient) send(pkt packet.Packet) error {
+	rc.sMutex.Lock()
+	defer rc.sMutex.Unlock()
+
+	// allocate buffer
+	buf := make([]byte, pkt.Len())
+
+	// encode packet
+	_, err := pkt.Encode(buf)
+	if err != nil {
+		rc.conn.Close()
+		return errors.New("text") //newTransportError(EncodeError, err)
+	}
+
+	// write buffer to connection
+	bytesWritten, err := rc.conn.Write(buf)
+	if err != nil {
+		rc.conn.Close()
+		// return newTransportError(NetworkError, err)
+	}
+	fmt.Println(bytesWritten)
+	// increment write counter
+	// atomic.AddInt64(&c.writeCounter, int64(bytesWritten))
+
+	// return nil
+	return nil
 }

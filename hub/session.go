@@ -1,7 +1,8 @@
 package hub
 
 import (
-	// "github.com/showntop/sun-broker/store"
+	"fmt"
+
 	"github.com/gomqtt/packet"
 )
 
@@ -64,7 +65,10 @@ func (ts *ToughSession) LookupPacket(id uint16) (packet.Packet, error) {
 }
 
 func (ts *ToughSession) PublishMsg(pkt *packet.PublishPacket) error {
-
+	fmt.Println("final publish...")
+	fmt.Println(pkt)
+	fmt.Println("client")
+	fmt.Println(*ts.currentClient)
 	ts.currentClient.send(pkt)
 	return nil
 }
